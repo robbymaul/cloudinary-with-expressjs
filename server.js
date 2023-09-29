@@ -3,10 +3,13 @@ const app = express()
 const port = 3000
 const cloudinary = require('cloudinary').v2
 const fileUpload = require('express-fileupload')
-require('dotenv').config() 
+const {Upload} = require('./models')
+const fs = require('fs')
+require('dotenv').config()
 
+app.use(express.json())
 app.use(fileUpload({
-    useTempFiles:true
+    useTempFiles: true,
 }))
 
 app.use(express.json())
@@ -32,10 +35,30 @@ app.post('/upload', async (req, res) => {
 
     const {image} = req.files
 
-    const cloudFile = await upload(image.tempFilePath)
-    console.info(cloudFile)
 
-    res.status(201).json({message:'Image uploaded successfully', data: cloudFile.secure_url})
+    const cloudFile = await upload(image.tempFilePath)
+    console.info(cloudFile.secure_url)
+
+    
+    try {
+        // kita harus mendapatkan request param id
+        const createFile = await Upload.create({
+            image: cloudFile.secure_url
+        }) 
+
+
+        fs.unlinkSync(image.tempFilePath) // delete image after create upload file in database
+
+        const result = {
+            status: "oke",
+            data: createFile
+        }
+
+        res.status(200).json(result)
+    } catch (error) {
+        console.log(error, "not found")
+    }
+
 })
 
 
